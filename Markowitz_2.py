@@ -70,8 +70,33 @@ class MyPortfolio:
         """
         TODO: Complete Task 4 Below
         """
-        
-        
+        target_mom_window = 126
+        top_k = 4
+        alpha = 10
+        self.portfolio_weights.loc[:, :] = 0.0
+        n_assets = len(assets)
+        price = self.price[assets]
+        mom = price.pct_change(periods=target_mom_window)
+        for idx_pos in range(self.lookback + 1, len(self.price.index)):
+            date = self.price.index[idx_pos]
+            R_window = self.returns[assets].iloc[idx_pos - self.lookback : idx_pos]
+            vol = R_window.std(ddof=0)
+            vol = vol.replace(0.0, np.nan)
+            inv_vol = 1.0 / vol
+            inv_vol = inv_vol.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+            base_w = inv_vol / inv_vol.sum()
+            mom_vals = mom.loc[date]
+            mom_vals = mom_vals.fillna(0.0)
+            median_mom = mom_vals.median()
+            winners = mom_vals > median_mom
+            multipliers = pd.Series(1.0, index=assets)
+            ranks = mom_vals.rank(ascending=False, method="first")
+            multipliers[ranks <= top_k] = 1.0 + alpha
+            combined = base_w * multipliers
+            final_w = combined / combined.sum()
+            for a in assets:
+                self.portfolio_weights.at[date, a] = final_w.at[a]
+            self.portfolio_weights.at[date, self.exclude] = 0.0        
         """
         TODO: Complete Task 4 Above
         """
